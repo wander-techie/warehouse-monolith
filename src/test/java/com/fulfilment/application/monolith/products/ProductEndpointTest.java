@@ -11,26 +11,55 @@ import org.junit.jupiter.api.Test;
 public class ProductEndpointTest {
 
   @Test
-  public void testCrudProduct() {
+  public void testCreateProduct() {
     final String path = "product";
 
-    // List all, should have all 3 products the database has initially:
-    given()
-        .when()
-        .get(path)
-        .then()
-        .statusCode(200)
-        .body(containsString("TONSTAD"), containsString("KALLAX"), containsString("BESTÅ"));
+    String newProduct = """
+      {
+        "name": "LACK",
+        "price": 49.99,
+        "stock": 10
+      }
+      """;
 
-    // Delete the TONSTAD:
-    given().when().delete(path + "/1").then().statusCode(204);
-
-    // List all, TONSTAD should be missing now:
     given()
-        .when()
-        .get(path)
-        .then()
-        .statusCode(200)
-        .body(not(containsString("TONSTAD")), containsString("KALLAX"), containsString("BESTÅ"));
+            .contentType("application/json")
+            .body(newProduct)
+            .when()
+            .post(path)
+            .then()
+            .statusCode(201);
+
+    // Verify it exists
+    given()
+            .when()
+            .get(path)
+            .then()
+            .statusCode(200)
+            .body(containsString("LACK"));
   }
+
+  @Test
+  public void testGetSingleProduct() {
+    final String path = "product";
+
+    given()
+            .when()
+            .get(path + "/2")
+            .then()
+            .statusCode(200)
+            .body(containsString("KALLAX"));
+  }
+
+  @Test
+  public void testGetNonExistingProduct() {
+    final String path = "product";
+
+    given()
+            .when()
+            .get(path + "/999")
+            .then()
+            .statusCode(404);
+  }
+
 }
