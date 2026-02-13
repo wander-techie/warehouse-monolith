@@ -10,52 +10,92 @@ import org.junit.jupiter.api.Test;
 public class WarehouseEndpointIT {
 
   @Test
-  public void testSimpleListWarehouses() {
+  public void testAssignWarehouseSuccessfully() {
 
-    final String path = "warehouse";
+    String body = """
+      {
+        "storeId": 1,
+        "productId": 1,
+        "warehouseBusinessUnitCode": "MWH.001"
+      }
+      """;
 
-    // List all, should have all 3 products the database has initially:
     given()
-        .when()
-        .get(path)
-        .then()
-        .statusCode(200)
-        .body(containsString("MWH.001"), containsString("MWH.012"), containsString("MWH.023"));
+            .contentType("application/json")
+            .body(body)
+            .when()
+            .post("/fulfilment")
+            .then()
+            .statusCode(204);
   }
 
   @Test
-  public void testSimpleCheckingArchivingWarehouses() {
+  public void testMax3WarehousesPerStore() {
 
-    // Uncomment the following lines to test the WarehouseResourceImpl implementation
+    assign(1L, 1L, "MWH.001");
+    assign(1L, 2L, "MWH.012");
+    assign(1L, 3L, "MWH.023");
 
-    // final String path = "warehouse";
+    String body = """
+      {
+        "storeId": 1,
+        "productId": 4,
+        "warehouseBusinessUnitCode": "MWH.001"
+      }
+      """;
 
-    // List all, should have all 3 products the database has initially:
-    // given()
-    //     .when()
-    //     .get(path)
-    //     .then()
-    //     .statusCode(200)
-    //     .body(
-    //         containsString("MWH.001"),
-    //         containsString("MWH.012"),
-    //         containsString("MWH.023"),
-    //         containsString("ZWOLLE-001"),
-    //         containsString("AMSTERDAM-001"),
-    //         containsString("TILBURG-001"));
-
-    // // Archive the ZWOLLE-001:
-    // given().when().delete(path + "/1").then().statusCode(204);
-
-    // // List all, ZWOLLE-001 should be missing now:
-    // given()
-    //     .when()
-    //     .get(path)
-    //     .then()
-    //     .statusCode(200)
-    //     .body(
-    //         not(containsString("ZWOLLE-001")),
-    //         containsString("AMSTERDAM-001"),
-    //         containsString("TILBURG-001"));
+    given()
+            .contentType("application/json")
+            .body(body)
+            .when()
+            .post("/fulfilment")
+            .then()
+            .statusCode(422);
   }
+
+  @Test
+  public void testMax5ProductsPerWarehouse() {
+
+    assign(1L, 1L, "MWH.001");
+    assign(1L, 2L, "MWH.001");
+    assign(1L, 3L, "MWH.001");
+    assign(1L, 4L, "MWH.001");
+    assign(1L, 5L, "MWH.001");
+
+    String body = """
+      {
+        "storeId": 1,
+        "productId": 6,
+        "warehouseBusinessUnitCode": "MWH.001"
+      }
+      """;
+
+    given()
+            .contentType("application/json")
+            .body(body)
+            .when()
+            .post("/fulfilment")
+            .then()
+            .statusCode(422);
+  }
+
+  private void assign(Long storeId, Long productId, String warehouseCode) {
+
+    String body = """
+      {
+        "storeId": %d,
+        "productId": %d,
+        "warehouseBusinessUnitCode": "%s"
+      }
+      """.formatted(storeId, productId, warehouseCode);
+
+    given()
+            .contentType("application/json")
+            .body(body)
+            .when()
+            .post("/fulfilment")
+            .then()
+            .statusCode(204);
+  }
+
 }
